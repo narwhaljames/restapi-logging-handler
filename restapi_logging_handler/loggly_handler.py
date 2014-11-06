@@ -17,7 +17,7 @@ class LogglyHandler(RestApiHandler):
             self.tags = app_tags
         self.custom_token = custom_token
         super(LogglyHandler, self).__init__(
-            self, "https://logs-01.loggly.com/inputs/{0}/tag/{1}/"
+            "https://logs-01.loggly.com/inputs/{0}/tag/{1}/"
         )
 
     def _implodeTags(self):

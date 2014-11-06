@@ -46,7 +46,7 @@ class RestApiHandler(logging.Handler):
             payload['traceback'] = tb
         return payload
 
-    def _prepPayload(record):
+    def _prepPayload(self, record):
         """
         record: generated from logger module
         This preps the payload to be formatted in whatever content-type is
