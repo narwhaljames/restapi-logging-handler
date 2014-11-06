@@ -6,7 +6,7 @@ setup(
         sending logs through a REST-ful API.',
     name='restapi-logging-handler',
     packages=['restapi_logging_handler'],
-    install_requires=['logging', 'requests', 'json', 'traceback'],
+    install_requires=['requests'],
     author='RJ Gilligan',
     author_email='rj.gilligan@nrgnergy.com',
     url='https://github.com/energyplus/restapi-logging-handler.git',
