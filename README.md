@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 restapiHandler = RestApiHandler('http://my.restfulapi.com/endpoint/')
 logger.addHandler(restapiHandler)
 logger.setLevel(logging.INFO)
-logger.info("Send this to Loggly")
+logger.info("Send this to my RESTful API")
 ```
 
 By default, it sends the log data as a JSON object. You can currently change
@@ -38,7 +38,11 @@ logglyHandler = LogglyHandler('loggly-custom-key', ['tag1','tag2',...])
 ```
 
 ## Testing
-TODO
+Install nose and run tests
+```
+pip install nose
+nosetests
+```
 
 ## Forking
 If you'd like to extend this to include more REST-ful API's than just Loggly,
