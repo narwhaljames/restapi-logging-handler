@@ -1,5 +1,5 @@
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def read(*paths):
@@ -11,10 +11,9 @@ setup(
     name='restapi-logging-handler',
     version='0.1',
     description='A handler for the python logging module that allows \
-        sending logs through a REST-ful API.',
+        sending logs through a REST-ful API. With Loggly support.',
     long_description=(read('README.md')),
-    packages=find_packages(exclude=['tests*']),
-    # packages=['restapi_logging_handler'],
+    packages=['restapi_logging_handler'],
     install_requires=['requests'],
     author='RJ Gilligan',
     author_email='rj.gilligan@nrgnergy.com',
