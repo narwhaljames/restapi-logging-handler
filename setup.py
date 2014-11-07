@@ -9,7 +9,7 @@ def read(*paths):
 
 setup(
     name='restapi-logging-handler',
-    version='0.1',
+    version='0.1.1',
     description='A handler for the python logging module that allows \
         sending logs through a REST-ful API. With Loggly support.',
     long_description=(read('README.md')),
