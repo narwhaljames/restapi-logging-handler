@@ -18,7 +18,7 @@ setup(
     author='RJ Gilligan',
     author_email='rj.gilligan@nrgnergy.com',
     url='https://github.com/narwhaljames/restapi-logging-handler.git',
-    download_url='https://github.com/narwhaljames/restapi-logging-handler/tarball/0.1',
+    download_url='https://github.com/narwhaljames/restapi-logging-handler/tarball/0.1.1',
     keywords=['rest', 'api', 'logging', 'handler', 'loggly'],
     classifiers=[],
     license='MIT',
