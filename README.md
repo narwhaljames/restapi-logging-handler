@@ -38,10 +38,10 @@ logglyHandler = LogglyHandler('loggly-custom-key', ['tag1','tag2',...])
 ```
 
 ## Testing
-Install nose and run tests
+Install tox and run it to test against Python 2 and 3.
 ```
-pip install nose
-nosetests
+sudo pip install nose
+tox
 ```
 
 ## Forking
