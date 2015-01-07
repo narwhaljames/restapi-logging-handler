@@ -3,7 +3,7 @@ A simple logging handler for python that will send any logging events out to a
 RESTful API using HTTP POST requests.
 
 ## Installation
-TODO
+pip install restapi-logging-handler
 
 ## Usage
 Import whichever module(s) you need:
