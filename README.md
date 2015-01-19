@@ -48,3 +48,6 @@ tox
 ## Forking
 If you'd like to extend this to include more REST-ful API's than just Loggly,
 send me a pull request!
+
+## Contributors
+Ethan McCreadie
