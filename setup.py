@@ -15,7 +15,7 @@ setup(
         sending logs through a REST-ful API. With Loggly support.',
     long_description=description,
     packages=['restapi_logging_handler'],
-    install_requires=['requests'],
+    install_requires=['requests-futures'],
     author='RJ Gilligan',
     author_email='rj.gilligan@nrgnergy.com',
     url='https://github.com/narwhaljames/restapi-logging-handler.git',

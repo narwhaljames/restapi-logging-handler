@@ -1,7 +1,8 @@
 import logging
-import requests
 import json
 import traceback
+
+from requests_futures.sessions import FuturesSession
 
 
 class RestApiHandler(logging.Handler):
@@ -15,6 +16,9 @@ class RestApiHandler(logging.Handler):
         """
         self.endpoint = endpoint
         self.content_type = content_type
+        self.session = FuturesSession(max_workers=512)
+        self.requests_level = logging.getLogger('requests').level
+        self.record_count = 0
         logging.Handler.__init__(self)
 
     def _getTraceback(self, record):
@@ -59,19 +63,26 @@ class RestApiHandler(logging.Handler):
             'json': (json.dumps(payload), 'application/json')
         }.get(self.content_type, (json.dumps(payload), 'text/plain'))
 
+    def restore_request_logging_if_done(self, sess, resp):
+        self.record_count = self.record_count - 1
+        if self.record_count == 0:
+            logging.getLogger('requests').setLevel(self.requests_level)
+
     def emit(self, record):
         """
         Override emit() method in handler parent for sending log to RESTful API
         """
         data, header = self._prepPayload(record)
+        logging.getLogger('requests').setLevel(logging.CRITICAL)
+        self.record_count = self.record_count + 1
         try:
-            # Stop infinite loop with requests module logging info
+            # Stop infinite loop with grequests module logging info
             # inside logging module
-            requests_level = logging.getLogger('requests').level
-            logging.getLogger('requests').setLevel(logging.CRITICAL)
-            r = requests.post(
+            self.session.post(
                 self._getEndpoint(),
-                data=data, headers={'content-type': header})
-            logging.getLogger('requests').setLevel(requests_level)
+                data=data, headers={'content-type': header},
+                background_callback=self.restore_request_logging_if_done
+            )
         except:
+            self.restore_request_logging_if_done()
             self.handleError(record)
