@@ -64,6 +64,11 @@ class RestApiHandler(logging.Handler):
         }.get(self.content_type, (json.dumps(payload), 'text/plain'))
 
     def restore_request_logging_if_done(self, sess, resp):
+        """
+        Check current count of requests waiting to complete and change level to
+        stop infinite loop with requests module logging info
+        inside logging module.
+        """
         self.record_count = self.record_count - 1
         if self.record_count == 0:
             logging.getLogger('requests').setLevel(self.requests_level)
@@ -76,8 +81,6 @@ class RestApiHandler(logging.Handler):
         logging.getLogger('requests').setLevel(logging.CRITICAL)
         self.record_count = self.record_count + 1
         try:
-            # Stop infinite loop with grequests module logging info
-            # inside logging module
             self.session.post(
                 self._getEndpoint(),
                 data=data, headers={'content-type': header},

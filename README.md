@@ -1,6 +1,7 @@
-# Python RESTful API Logging Handler with Loggly Support
+# Python RESTful API Asyncronous Logging Handler with Loggly Support
 A simple logging handler for python that will send any logging events out to a
-RESTful API using HTTP POST requests.
+RESTful API using HTTP POST requests. Fully asyncronuous using requests-futures,
+tested for Python 2 & 3, and has support for Loggly.
 
 ## Installation
 pip install restapi-logging-handler
