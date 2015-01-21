@@ -26,7 +26,7 @@ class RestApiHandler(logging.Handler):
         Format the traceback of the record, if exists.
         """
         if record.exc_info:
-            return '\n'.join(traceback.format_exception(*record.exc_info))
+            return '\n'.join(traceback.format_exception(*record.exc_info()))
         return None
 
     def _getEndpoint(self):
