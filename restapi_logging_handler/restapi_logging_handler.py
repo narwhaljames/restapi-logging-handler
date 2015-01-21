@@ -16,7 +16,7 @@ class RestApiHandler(logging.Handler):
         """
         self.endpoint = endpoint
         self.content_type = content_type
-        self.session = FuturesSession(max_workers=512)
+        self.session = FuturesSession(max_workers=32)
         self.requests_level = logging.getLogger('requests').level
         self.record_count = 0
         logging.Handler.__init__(self)
