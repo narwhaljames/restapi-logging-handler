@@ -30,13 +30,28 @@ restapiHandler = RestApiHandler('http://my.restfulapi.com/endpoint/', 'text')
 ```
 
 ### Loggly Usage
-Set your Python logging handler to send logs out to your Loggly account.
-The LogglyHandler takes as its first argument the custom token given to you
-when you sign up for a Loggly account. The second argument can be a tag string,
+Set your Python logging handler to send logs out to your Loggly account. The
+handler collects logs in a batch and sends them out every `interval` seconds.
+After the interval passes, Loggly is sent all the logs collected. There are
+`max_attempts` attempts to send the logs before the internal handleError() method
+and an exception are thrown.
+####Parameters
+- custom_token: The LogglyHandler takes as its first argument the custom token given to you
+when you sign up for a Loggly account.
+- app_tags: The second argument can be a tag string,
 or a list of tags to be associated with the log inside of Loggly.
+- interval: defaults to 1 second
+max_attempts: defaults to 5 attempts
+
 ```
-logglyHandler = LogglyHandler('loggly-custom-key', ['tag1','tag2',...])
+logglyHandler = LogglyHandler(
+    custom_token='loggly-custom-key',
+    app_tags=['tag1','tag2',...],
+    interval=1.0,
+    max_attemps=5
+)
 ```
+
 
 ## Testing
 Install tox and run it to test against Python 2 and 3.
