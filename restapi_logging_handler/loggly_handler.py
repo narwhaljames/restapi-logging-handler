@@ -8,12 +8,29 @@ import threading
 from restapi_logging_handler.restapi_logging_handler import RestApiHandler
 
 
+def setInterval(interval):
+    def decorator(function):
+        def wrapper(*args, **kwargs):
+            stopped = threading.Event()
+
+            def loop(): # executed in another thread
+                while not stopped.wait(interval): # until stopped
+                    function(*args, **kwargs)
+
+            t = threading.Thread(target=loop)
+            t.daemon = True # stop if the program exits
+            t.start()
+            return stopped
+        return wrapper
+    return decorator
+
+
 class LogglyHandler(RestApiHandler):
     """
     A handler which pipes all logs to loggly through HTTP POST requests.
     Some ideas borrowed from github.com/kennedyj/loggly-handler
     """
-    def __init__(self, custom_token, app_tags, interval=1.0, max_attempts=5):
+    def __init__(self, custom_token, app_tags, max_attempts=5):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
@@ -21,24 +38,18 @@ class LogglyHandler(RestApiHandler):
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
         super(LogglyHandler, self).__init__(self._getEndpoint())
-        self.interval = interval
         self.max_attempts = max_attempts
         self.timer = None
         self.logs = []
-        self._startFlushTimer()
+        self.timer = self._flushAndRepeatTimer()
         atexit.register(self._stopFlushTimer)
 
-    def _startFlushTimer(self):
-        self.timer = threading.Timer(self.interval, self._flushAndRepeatTimer)
-        self.timer.start()
-
+    @setInterval(1)
     def _flushAndRepeatTimer(self):
         self.flush()
-        if self.timer.finished.is_set():
-            self._startFlushTimer()
 
     def _stopFlushTimer(self):
-        self.timer.cancel()
+        self.timer.set()
         self.flush()
 
     def _getTags(self, app_tags):
