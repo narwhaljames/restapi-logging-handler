@@ -65,7 +65,7 @@ class TestLogglyHandlerTimerStops(_BaseLogglyLoggingHandler):
         self.assert_post_count_is(1)
 
     def test_marks_timer_finished(self):
-        self.assertTrue(self.handler.timer.finished.is_set())
+        self.assertTrue(self.handler.timer.is_set())
 
 
 class TestLogglyHandlerRepeats(_BaseLogglyLoggingHandler):
@@ -78,7 +78,7 @@ class TestLogglyHandlerRepeats(_BaseLogglyLoggingHandler):
         self.assert_post_count_is(2)
 
     def test_timer_not_finished(self):
-        self.assertFalse(self.handler.timer.finished.is_set())
+        self.assertFalse(self.handler.timer.is_set())
 
 
 class TestLogglyHandlerSendsMultipleMessages(_BaseLogglyLoggingHandler):
@@ -92,7 +92,7 @@ class TestLogglyHandlerSendsMultipleMessages(_BaseLogglyLoggingHandler):
         self.assert_post_count_is(1)
 
     def test_timer_not_finished(self):
-        self.assertFalse(self.handler.timer.finished.is_set())
+        self.assertFalse(self.handler.timer.is_set())
 
 
 class TestAcceptsTextTags(_BaseLogglyLoggingHandler):
