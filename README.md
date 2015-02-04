@@ -41,7 +41,7 @@ when you sign up for a Loggly account.
 - app_tags: The second argument can be a tag string,
 or a list of tags to be associated with the log inside of Loggly.
 - interval: defaults to 1 second
-max_attempts: defaults to 5 attempts
+- max_attempts: defaults to 5 attempts
 
 ```
 logglyHandler = LogglyHandler(
