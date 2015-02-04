@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 import atexit
+from functools import partial
 import json
+import logging
 import threading
 
 from restapi_logging_handler.restapi_logging_handler import RestApiHandler
@@ -11,7 +13,7 @@ class LogglyHandler(RestApiHandler):
     A handler which pipes all logs to loggly through HTTP POST requests.
     Some ideas borrowed from github.com/kennedyj/loggly-handler
     """
-    def __init__(self, custom_token, app_tags, interval=1.0):
+    def __init__(self, custom_token, app_tags, interval=1.0, max_attempts=5):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
@@ -20,6 +22,7 @@ class LogglyHandler(RestApiHandler):
         self.custom_token = custom_token
         super(LogglyHandler, self).__init__(self._getEndpoint())
         self.interval = interval
+        self.max_attempts = 5
         self.timer = None
         self.logs = []
         self._startFlushTimer()
@@ -43,7 +46,8 @@ class LogglyHandler(RestApiHandler):
             tags = app_tags.split(',')
         else:
             tags = app_tags
-        tags.insert(0, 'bulk')
+        if 'bulk' not in tags:
+            tags.insert(0, 'bulk')
         return tags
 
     def _implodeTags(self):
@@ -74,18 +78,29 @@ class LogglyHandler(RestApiHandler):
         payload['tags'] = self._implodeTags()
         return payload
 
-    @staticmethod
-    def handle_response(sess, resp):
-        pass
+    def handle_response(self, batch, attempt, sess, resp):
+        if resp.status_code != 200:
+            if attempt <= self.max_attempts:
+                attempt += 1
+                self.flush(batch, attempt)
+            else:
+                raise Exception('Error sending log batch')
+                self.handleError(logging.makeLogRecord({
+                    'msg': 'Error sending log batch: %s',
+                    'args': batch,
+                }))
 
-    def flush(self):
-        self.logs, current_batch = [], self.logs
+    def flush(self, current_batch=None, attempt=1):
+        if current_batch is None:
+            self.logs, current_batch = [], self.logs
+        callback = partial(
+            self.handle_response, current_batch, attempt=attempt)
         if current_batch:
             data = '\n'.join(current_batch)
             self.session.post(self._getEndpoint(),
                               data=data,
                               headers={'content-type': 'application/json'},
-                              background_callback=self.handle_response)
+                              background_callback=callback)
 
     def emit(self, record):
         """
