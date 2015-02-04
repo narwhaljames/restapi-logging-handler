@@ -38,7 +38,7 @@ class LogglyHandler(RestApiHandler):
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
         super(LogglyHandler, self).__init__(self._getEndpoint())
-        self.max_attempts = 5
+        self.max_attempts = max_attempts
         self.timer = None
         self.logs = []
         self.timer = self._flushAndRepeatTimer()
