@@ -3,6 +3,7 @@ import atexit
 from functools import partial
 import json
 import logging
+import os
 import threading
 
 from restapi_logging_handler.restapi_logging_handler import RestApiHandler
@@ -35,6 +36,7 @@ class LogglyHandler(RestApiHandler):
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
         """
+        self.pid = os.getpid()
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
         super(LogglyHandler, self).__init__(self._getEndpoint())
@@ -117,6 +119,13 @@ class LogglyHandler(RestApiHandler):
         """
         Override emit() method in handler parent for sending log to RESTful API
         """
+
+        pid = os.getpid()
+        if pid != self.pid:
+            self.pid = pid
+            self.logs = []
+            self.timer = self._flushAndRepeatTimer()
+            atexit.register(self._stopFlushTimer)
 
         # avoid infinite recursion
         if record.name.startswith('requests'):
