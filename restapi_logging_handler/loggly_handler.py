@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import threading
+import requests
 
 from restapi_logging_handler.restapi_logging_handler import RestApiHandler
 
@@ -31,7 +32,7 @@ class LogglyHandler(RestApiHandler):
     A handler which pipes all logs to loggly through HTTP POST requests.
     Some ideas borrowed from github.com/kennedyj/loggly-handler
     """
-    def __init__(self, custom_token, app_tags, max_attempts=5):
+    def __init__(self, custom_token, app_tags, max_attempts=5, aws_tag=False):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
@@ -39,6 +40,19 @@ class LogglyHandler(RestApiHandler):
         self.pid = os.getpid()
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
+
+        self.aws_tag = aws_tag
+        if self.aws_tag:
+            try:
+                _aws_base = "http://169.254.169.254/latest/meta-data/{}"
+                self.ec2_id = requests.get(_aws_base.format('instance-id'))\
+                    .content.decode('utf-8')
+                self.ipv4 = requests.get(_aws_base.format('local-ipv4'))\
+                    .content.decode('utf-8')
+            except:
+                # ummm how to record this?
+                self.aws_tag = False
+
         super(LogglyHandler, self).__init__(self._getEndpoint())
         self.max_attempts = max_attempts
         self.timer = None
@@ -130,5 +144,9 @@ class LogglyHandler(RestApiHandler):
         # avoid infinite recursion
         if record.name.startswith('requests'):
             return
+
+        if self.aws_tag:
+            record.ec2_id = self.ec2_id
+            record.ipv4 = self.ipv4
 
         self.logs.append(self._prepPayload(record))
