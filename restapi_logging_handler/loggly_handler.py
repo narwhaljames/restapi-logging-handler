@@ -42,16 +42,25 @@ class LogglyHandler(RestApiHandler):
         self.custom_token = custom_token
 
         self.aws_tag = aws_tag
-        if self.aws_tag:
-            try:
-                _aws_base = "http://169.254.169.254/latest/meta-data/{}"
-                self.ec2_id = requests.get(_aws_base.format('instance-id'))\
-                    .content.decode('utf-8')
-                self.ipv4 = requests.get(_aws_base.format('local-ipv4'))\
-                    .content.decode('utf-8')
-            except:
-                # ummm how to record this?
-                self.aws_tag = False
+        # if self.aws_tag:
+        try:
+            _aws_base = "http://169.254.169.254/latest/meta-data/{}"
+            self.ec2_id = requests.get(_aws_base.format('instance-id'))\
+                .content.decode('utf-8')
+            self.ipv4 = requests.get(_aws_base.format('local-ipv4'))\
+                .content.decode('utf-8')
+
+            self.tags.append(self.ec2_id)
+        except:
+            # ummm how to record this?
+            print('yo! kind of a problem getting awws info!')
+            import traceback
+            import sys
+
+            print("-"*60)
+            traceback.print_exc(file=sys.stdout)
+            print("-"*60)
+            self.aws_tag = False
 
         super(LogglyHandler, self).__init__(self._getEndpoint())
         self.max_attempts = max_attempts
