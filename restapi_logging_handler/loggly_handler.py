@@ -1,10 +1,11 @@
 from __future__ import absolute_import
+
 import atexit
-from functools import partial
 import json
-import logging
 import os
 import threading
+from functools import partial
+
 import requests
 
 from restapi_logging_handler.restapi_logging_handler import RestApiHandler
@@ -58,7 +59,7 @@ class LogglyHandler(RestApiHandler):
             except Exception as e:
                 # TODO: how to record this?
                 print(
-                    '****************************************************!'
+                    '*******!!!!*******'
                     ' kind of a problem getting aws info!', id_url,
                     repr(e),
                 )
@@ -127,10 +128,6 @@ class LogglyHandler(RestApiHandler):
                 self.flush(batch, attempt)
             else:
                 raise Exception('Error sending log batch')
-                self.handleError(logging.makeLogRecord({
-                    'msg': 'Error sending log batch: %s',
-                    'args': batch,
-                }))
 
     def flush(self, current_batch=None, attempt=1):
         if current_batch is None:

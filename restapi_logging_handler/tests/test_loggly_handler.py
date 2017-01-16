@@ -123,10 +123,7 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
     def execute(cls):
         for index, result in enumerate(cls.results):
             # Expect an exception if attempt > max_attempts
-            print('enum index', index)
-
             if index + 1 > cls.handler.max_attempts:
-                print('expecting failure', index)
                 try:
                     cls.handler.handle_response(['{}'], index + 1, Mock(),
                                                 result)
@@ -134,7 +131,6 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
                 except Exception:
                     pass
             else:
-                print('expecting success', index)
                 cls.handler.handle_response(['{}'], index + 1, Mock(), result)
 
 
