@@ -15,15 +15,17 @@ def setInterval(interval):
         def wrapper(*args, **kwargs):
             stopped = threading.Event()
 
-            def loop(): # executed in another thread
-                while not stopped.wait(interval): # until stopped
+            def loop():  # executed in another thread
+                while not stopped.wait(interval):  # until stopped
                     function(*args, **kwargs)
 
             t = threading.Thread(target=loop)
-            t.daemon = True # stop if the program exits
+            t.daemon = True  # stop if the program exits
             t.start()
             return stopped
+
         return wrapper
+
     return decorator
 
 
@@ -32,37 +34,40 @@ class LogglyHandler(RestApiHandler):
     A handler which pipes all logs to loggly through HTTP POST requests.
     Some ideas borrowed from github.com/kennedyj/loggly-handler
     """
+
     def __init__(self, custom_token, app_tags, max_attempts=5, aws_tag=False):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
         """
+
+        print("Hello from mikey's develop version")
         self.pid = os.getpid()
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
 
         self.aws_tag = aws_tag
-        # if self.aws_tag:
-        try:
-            _aws_base = "http://169.254.169.254/latest/meta-data/{}"
-            self.ec2_id = requests.get(_aws_base.format('instance-id'))\
-                .content.decode('utf-8')
-            self.ipv4 = requests.get(_aws_base.format('local-ipv4'))\
-                .content.decode('utf-8')
+        if self.aws_tag:
+            id_url = None
+
+            try:
+                aws_base = "http://169.254.169.254/latest/meta-data/{}"
+                id_url = aws_base.format('instance-id')
+                self.ec2_id = requests.get(id_url, timeout=2).content.decode(
+                    'utf-8')
+            except Exception as e:
+                # TODO: how to record this?
+                print(
+                    '****************************************************!'
+                    ' kind of a problem getting aws info!', id_url,
+                    repr(e),
+                )
+                self.ec2_id = 'id_NA'
 
             self.tags.append(self.ec2_id)
-        except:
-            # ummm how to record this?
-            print('yo! kind of a problem getting awws info!')
-            import traceback
-            import sys
-
-            print("-"*60)
-            traceback.print_exc(file=sys.stdout)
-            print("-"*60)
-            self.aws_tag = False
 
         super(LogglyHandler, self).__init__(self._getEndpoint())
+
         self.max_attempts = max_attempts
         self.timer = None
         self.logs = []
@@ -112,6 +117,7 @@ class LogglyHandler(RestApiHandler):
         """
         payload = super(LogglyHandler, self)._getPayload(record)
         payload['tags'] = self._implodeTags()
+
         return payload
 
     def handle_response(self, batch, attempt, sess, resp):
@@ -140,7 +146,8 @@ class LogglyHandler(RestApiHandler):
 
     def emit(self, record):
         """
-        Override emit() method in handler parent for sending log to RESTful API
+        Override emit() method in handler parent for sending log to RESTful
+        API
         """
 
         pid = os.getpid()
@@ -153,9 +160,5 @@ class LogglyHandler(RestApiHandler):
         # avoid infinite recursion
         if record.name.startswith('requests'):
             return
-
-        if self.aws_tag:
-            record.ec2_id = self.ec2_id
-            record.ipv4 = self.ipv4
 
         self.logs.append(self._prepPayload(record))

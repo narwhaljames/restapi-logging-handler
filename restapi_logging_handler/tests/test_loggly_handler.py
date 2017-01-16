@@ -19,7 +19,7 @@ class _BaseLogglyHandler(TestCase):
 
     @classmethod
     def configure(cls):
-        cls.handler = LogglyHandler('LOGGLYKEY', cls.tags, 0.01)
+        cls.handler = LogglyHandler('LOGGLYKEY', cls.tags, max_attempts=5)
         logging.root.addHandler(cls.handler)
 
     @classmethod
@@ -36,11 +36,10 @@ class _BaseLogglyHandler(TestCase):
         cls.handler.flush()
 
     def assert_post_count_is(self, count):
-       self.assertEqual(self.session.return_value.post.call_count, count)
+        self.assertEqual(self.session.return_value.post.call_count, count)
 
 
 class _BaseLogglyLoggingHandler(_BaseLogglyHandler):
-
     def test_tags_are_correct(self):
         request_params = self.session.return_value.post.call_args
         logging.warn(repr(request_params[1]['data']))
@@ -124,15 +123,18 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
     def execute(cls):
         for index, result in enumerate(cls.results):
             # Expect an exception if attempt > max_attempts
+            print('enum index', index)
+
             if index + 1 > cls.handler.max_attempts:
+                print('expecting failure', index)
                 try:
                     cls.handler.handle_response(['{}'], index + 1, Mock(),
                                                 result)
+                    cls.assertTrue(False, "fail")
                 except Exception:
                     pass
-                else:
-                    cls.assertTrue(False)
             else:
+                print('expecting success', index)
                 cls.handler.handle_response(['{}'], index + 1, Mock(), result)
 
 

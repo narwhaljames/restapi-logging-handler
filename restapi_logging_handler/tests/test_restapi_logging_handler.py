@@ -1,5 +1,9 @@
 import json
-from mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
+
 from unittest import TestCase
 import logging
 
@@ -22,7 +26,7 @@ class TestRestApiHandler(TestCase):
         log.addHandler(self.handler)
         try:
             raise Exception
-        except Exception as e:
+        except:
             log.exception('this is an error')
         self.session.return_value.post.assert_called_once()
 
