@@ -40,6 +40,7 @@ class LogglyHandler(RestApiHandler):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
+        aws_tag: include aws instance id in tags if True and id can be found
         """
         self.pid = os.getpid()
         self.tags = self._getTags(app_tags)

@@ -23,7 +23,7 @@ setup(
                  'mike.reppy@nrg.com',
     url='https://github.com/narwhaljames/restapi-logging-handler.git',
     download_url='https://github.com/narwhaljames/'
-                 'restapi-logging-handler/tarball/0.2.2',
+                 'restapi-logging-handler/tarball/0.2.3',
     keywords=['rest', 'api', 'logging', 'handler', 'loggly'],
     classifiers=[],
     license='MIT',
