@@ -1,4 +1,5 @@
 import json
+
 try:
     from unittest.mock import patch
 except ImportError:
@@ -11,7 +12,6 @@ from restapi_logging_handler import RestApiHandler
 
 
 class TestRestApiHandler(TestCase):
-
     @classmethod
     @patch('restapi_logging_handler.restapi_logging_handler.FuturesSession')
     def setUpClass(cls, session):
@@ -33,3 +33,111 @@ class TestRestApiHandler(TestCase):
         request_params = self.session.return_value.post.call_args
         traceback_value = json.loads(request_params[1]['data'])['traceback']
         self.assertEqual(traceback_value[:9], 'Traceback')
+
+    def test_logging_meta(self):
+        log = logging.getLogger('testing')
+        log.addHandler(self.handler)
+
+        log.info('test message')
+
+        self.session.return_value.post.assert_called_once()
+
+        request_params = self.session.return_value.post.call_args
+        payload = json.loads(request_params[1]['data'])
+
+        created = payload['meta'].pop('created')
+        process = payload['meta'].pop('process')
+        thread = payload['meta'].pop('thread')
+        line = payload['meta'].pop('line')
+
+        self.assertTrue(isinstance(created, float))
+        self.assertTrue(isinstance(process, int))
+        self.assertTrue(isinstance(thread, int))
+        self.assertTrue(isinstance(line, int))
+
+        self.assertEquals(
+            payload,
+            {
+                'details': {},
+                'level': 'INFO',
+                'log': 'testing',
+                'message': 'test message',
+                'meta': {
+                    # 'created': 1484758407.541427,
+                    'funcName': 'test_logging_meta',
+                    # 'line': 41,
+                    # 'process': 60304,
+                    # 'thread': 140735191764992
+                }
+            }
+        )
+
+    def test_logging_details(self):
+        log = logging.getLogger('testing')
+        log.addHandler(self.handler)
+
+        log.info('test message', extra={'this': 1, 'that': None})
+
+        self.session.return_value.post.assert_called_once()
+
+        request_params = self.session.return_value.post.call_args
+        payload = json.loads(request_params[1]['data'])
+
+        details = payload.pop('details')
+
+        self.assertEquals(
+            details,
+            {'this': 1, 'that': None}
+        )
+
+    def test_ignored_record_keys(self):
+
+        self.assertEquals(
+            self.handler.ignored_record_keys,
+            {
+                'levelno',
+                'pathname',
+                'module',
+                'filename',
+                'funcName',
+                'asctime',
+                'msecs',
+                'processName',
+                'relativeCreated',
+                'threadName',
+                'stack_info',
+                'exc_info',
+                'exc_text',
+                'args',
+                'msg'
+            }
+        )
+
+    def test_detail_keys(self):
+
+        self.assertEquals(
+            self.handler.detail_ignore_set,
+            {
+                'levelno',
+                'pathname',
+                'module',
+                'filename',
+                'funcName',
+                'asctime',
+                'msecs',
+                'processName',
+                'relativeCreated',
+                'threadName',
+                'stack_info',
+                'exc_info',
+                'exc_text',
+                'args',
+                'msg',
+                'created',
+                'levelname',
+                'process',
+                'thread',
+                'name',
+                'lineno',
+            }
+        )

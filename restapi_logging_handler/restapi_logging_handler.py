@@ -107,8 +107,6 @@ class RestApiHandler(logging.Handler):
         foo = TOP_KEYS.union(META_KEYS)
         self.detail_ignore_set = self.ignored_record_keys.union(foo)
 
-        print("DEETS", self.detail_ignore_set)
-
         logging.Handler.__init__(self)
 
     def _getTraceback(self, record):

@@ -174,3 +174,21 @@ class TestMoreThanMaxFailures(_BaseWebRequestFailure):
 
     def test_post_twice(self):
         self.assert_post_count_is(5)
+
+
+@patch('restapi_logging_handler.loggly_handler.requests.get')
+class TestAwsTagging(TestCase):
+    def test_tag_true(self, mock_get):
+        mock_get.return_value.content = 'id_test'.encode('utf-8')
+
+        loggly = LogglyHandler('token', ['tag'], max_attempts=1, aws_tag=True)
+
+        self.assertEqual(loggly.tags, ['bulk', 'tag', 'id_test'])
+
+    def test_tag_false(self, mock_get):
+        mock_get.return_value.content = 'id_test'.encode('utf-8')
+
+        loggly = LogglyHandler('token', ['tag'], max_attempts=1,
+                               aws_tag=False)
+
+        self.assertEqual(loggly.tags, ['bulk', 'tag'])

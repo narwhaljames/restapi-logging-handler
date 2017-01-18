@@ -41,8 +41,6 @@ class LogglyHandler(RestApiHandler):
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
         """
-
-        print("Hello from mikey's develop version")
         self.pid = os.getpid()
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
