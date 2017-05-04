@@ -82,7 +82,27 @@ def serialize(obj):
         serial = str(obj)
         return serial
 
-    return obj.__dict__
+    try:
+        return obj.__dict__
+    except AttributeError:
+        return str(obj)
+    except Exception as e:
+        strval = 'unknown obj'
+        exceptval = 'unknown err'
+        try:
+            strval = str(obj)
+            exceptval = repr(e)
+        except:
+            pass
+        return 'json fail {} {}'.format(exceptval, strval)
+
+
+# test
+def simple_json(obj):
+    try:
+        return json.dumps(obj, default=serialize)
+    except:
+        return "cannot serialize {}".format(type(obj))
 
 
 class RestApiHandler(logging.Handler):
@@ -143,6 +163,7 @@ class RestApiHandler(logging.Handler):
         """
         The data that will be sent to the RESTful API
         """
+
         try:
             # top level payload items
             payload = {
@@ -158,7 +179,7 @@ class RestApiHandler(logging.Handler):
 
             # everything else goes in details
             payload['details'] = {
-                k: v for (k, v) in record.__dict__.items()
+                k: simple_json(v) for (k, v) in record.__dict__.items()
                 if k not in self.detail_ignore_set
                 }
 
