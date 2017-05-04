@@ -1,4 +1,6 @@
 import json
+import uuid
+import datetime
 
 try:
     from unittest.mock import patch
@@ -88,6 +90,72 @@ class TestRestApiHandler(TestCase):
         self.assertEquals(
             details,
             {'this': 1, 'that': None}
+        )
+
+    def test_logging_uuid(self):
+        log = logging.getLogger('testing')
+        log.addHandler(self.handler)
+
+        random_id = uuid.uuid4()
+
+        log.info('test message', extra={'this': random_id, 'that': None})
+
+        self.session.return_value.post.assert_called_once()
+
+        request_params = self.session.return_value.post.call_args
+        payload = json.loads(request_params[1]['data'])
+
+        details = payload.pop('details')
+
+        self.assertEquals(
+            details,
+            {'this': str(random_id), 'that': None}
+        )
+
+    def test_logging_datetime(self):
+        log = logging.getLogger('testing')
+        log.addHandler(self.handler)
+
+        random_date = datetime.datetime.utcnow()
+
+        log.info('test message', extra={'this': random_date, 'that': None})
+
+        self.session.return_value.post.assert_called_once()
+
+        request_params = self.session.return_value.post.call_args
+        payload = json.loads(request_params[1]['data'])
+
+        details = payload.pop('details')
+
+        self.assertEquals(
+            details,
+            {'this': random_date.isoformat(sep='T'), 'that': None}
+        )
+
+    def test_logging_thing(self):
+        log = logging.getLogger('testing')
+        log.addHandler(self.handler)
+
+        class Thing(object):
+            def __init__(self):
+                self.thing1 = 'Fred'
+                self.thing2 = 'Jerry'
+
+        random_thing = Thing()
+
+        log.info('test message', extra={'this': random_thing, 'that': None})
+
+        self.session.return_value.post.assert_called_once()
+
+        request_params = self.session.return_value.post.call_args
+        payload = json.loads(request_params[1]['data'])
+
+        details = payload.pop('details')
+
+        self.assertEquals(
+            details,
+            {'this': {'thing1': 'Fred', 'thing2': 'Jerry'},
+             'that': None}
         )
 
     def test_ignored_record_keys(self):

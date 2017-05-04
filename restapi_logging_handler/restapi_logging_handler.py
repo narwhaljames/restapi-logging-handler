@@ -1,3 +1,5 @@
+import datetime
+import uuid
 import logging
 import json
 import traceback
@@ -68,6 +70,19 @@ TOP_KEYS = {
     'levelname',
     'name',
 }
+
+
+def serialize(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime.datetime):
+        serial = obj.isoformat(sep='T')
+        return serial
+
+    if isinstance(obj, uuid.UUID):
+        serial = str(obj)
+        return serial
+
+    return obj.__dict__
 
 
 class RestApiHandler(logging.Handler):
@@ -174,9 +189,11 @@ class RestApiHandler(logging.Handler):
         returns: a tuple of the data and the http content-type
         """
         payload = self._getPayload(record)
+        json_data = json.dumps(payload, default=serialize)
+
         return {
-            'json': (json.dumps(payload), 'application/json')
-        }.get(self.content_type, (json.dumps(payload), 'text/plain'))
+            'json': (json_data, 'application/json')
+        }.get(self.content_type, (json_data, 'text/plain'))
 
     def emit(self, record):
         """
