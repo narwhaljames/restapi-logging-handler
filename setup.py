@@ -21,11 +21,9 @@ setup(
     author_email='r.j.gilligan@nrg.com, '
                  'ethan.mccreadie@nrg.com, '
                  'mike.reppy@nrg.com',
-    url='https://github.com/EnergyPlus/restapi-logging-handler.git',
-    download_url=(
-        'https://github.com/EnergyPlus/restapi-logging-handler.git/'
-        'tarball/0.2.7'
-    ),
+    url='https://github.com/narwhaljames/restapi-logging-handler.git',
+    download_url=
+        'https://github.com/narwhaljames/restapi-logging-handler/tarball/0.2.7',
     keywords=['rest', 'api', 'logging', 'handler', 'loggly'],
     classifiers=[],
     license='MIT',
