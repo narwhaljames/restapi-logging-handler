@@ -8,7 +8,10 @@ from functools import partial
 
 import requests
 
-from restapi_logging_handler.restapi_logging_handler import RestApiHandler
+from restapi_logging_handler.restapi_logging_handler import (
+    RestApiHandler,
+    serialize,
+)
 
 
 def setInterval(interval):
@@ -109,7 +112,7 @@ class LogglyHandler(RestApiHandler):
         This preps the payload to be formatted in whatever content-type is
         expected from the RESTful API.
         """
-        return json.dumps(self._getPayload(record))
+        return json.dumps(self._getPayload(record), default=serialize)
 
     def _getPayload(self, record):
         """

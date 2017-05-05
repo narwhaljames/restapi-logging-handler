@@ -1,3 +1,5 @@
+import datetime
+import uuid
 import logging
 import json
 import traceback
@@ -70,6 +72,39 @@ TOP_KEYS = {
 }
 
 
+def serialize(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime.datetime):
+        serial = obj.isoformat(sep='T')
+        return serial
+
+    if isinstance(obj, uuid.UUID):
+        serial = str(obj)
+        return serial
+
+    try:
+        return obj.__dict__
+    except AttributeError:
+        return str(obj)
+    except Exception as e:
+        strval = 'unknown obj'
+        exceptval = 'unknown err'
+        try:
+            strval = str(obj)
+            exceptval = repr(e)
+        except:
+            pass
+        return 'json fail {} {}'.format(exceptval, strval)
+
+
+# test
+def simple_json(obj):
+    try:
+        return json.dumps(obj, default=serialize)
+    except:
+        return "cannot serialize {}".format(type(obj))
+
+
 class RestApiHandler(logging.Handler):
     """
     A handler which does an HTTP POST for each logging event.
@@ -128,6 +163,7 @@ class RestApiHandler(logging.Handler):
         """
         The data that will be sent to the RESTful API
         """
+
         try:
             # top level payload items
             payload = {
@@ -143,7 +179,7 @@ class RestApiHandler(logging.Handler):
 
             # everything else goes in details
             payload['details'] = {
-                k: v for (k, v) in record.__dict__.items()
+                k: simple_json(v) for (k, v) in record.__dict__.items()
                 if k not in self.detail_ignore_set
                 }
 
@@ -174,9 +210,11 @@ class RestApiHandler(logging.Handler):
         returns: a tuple of the data and the http content-type
         """
         payload = self._getPayload(record)
+        json_data = json.dumps(payload, default=serialize)
+
         return {
-            'json': (json.dumps(payload), 'application/json')
-        }.get(self.content_type, (json.dumps(payload), 'text/plain'))
+            'json': (json_data, 'application/json')
+        }.get(self.content_type, (json_data, 'text/plain'))
 
     def emit(self, record):
         """
