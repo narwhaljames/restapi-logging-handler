@@ -28,7 +28,7 @@ class TestRestApiHandler(TestCase):
         log.addHandler(self.handler)
         try:
             raise Exception
-        except:
+        except Exception:
             log.exception('this is an error')
         self.session.return_value.post.assert_called_once()
 

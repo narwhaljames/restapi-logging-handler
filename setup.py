@@ -1,6 +1,5 @@
 from setuptools import setup
 
-
 try:
     import pypandoc
 
@@ -22,8 +21,10 @@ setup(
                  'ethan.mccreadie@nrg.com, '
                  'mgpr@abacalab.com',
     url='https://github.com/narwhaljames/restapi-logging-handler.git',
-    download_url=
-        'https://github.com/narwhaljames/restapi-logging-handler/tarball/0.2.7',
+    download_url=(
+        'https://github.com/narwhaljames/'
+        'restapi-logging-handler/tarball/0.2.8'
+    ),
     keywords=['rest', 'api', 'logging', 'handler', 'loggly'],
     classifiers=[],
     license='MIT',

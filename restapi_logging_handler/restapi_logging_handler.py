@@ -92,7 +92,7 @@ def serialize(obj):
         try:
             strval = str(obj)
             exceptval = repr(e)
-        except:
+        except Exception:
             pass
         return 'json fail {} {}'.format(exceptval, strval)
 
@@ -101,7 +101,7 @@ def serialize(obj):
 def simple_json(obj):
     try:
         return json.dumps(obj, default=serialize)
-    except:
+    except Exception:
         return "cannot serialize {}".format(type(obj))
 
 
@@ -231,5 +231,5 @@ class RestApiHandler(logging.Handler):
             self.session.post(self._getEndpoint(),
                               data=data,
                               headers={'content-type': header})
-        except:
+        except Exception:
             self.handleError(record)
