@@ -56,14 +56,36 @@ logrecord attributes
      'args',
      'funcName',
      'thread']
+     
+     'process',
+     'thread'
+
 
 """
+
+DEFAULT_IGNORED_KEYS = {
+    'process',
+    'thread'
+    'levelno',
+    'pathname',
+    'module',
+    'filename',
+    'funcName',
+    'asctime',
+    'msecs',
+    'processName',
+    'relativeCreated',
+    'threadName',
+    'stack_info',
+    'exc_info',
+    'exc_text',
+    'args',
+    'msg'
+}
 META_KEYS = {
     'created',
-    'process',
     'funcName',
     'lineno',
-    'thread'
 }
 
 TOP_KEYS = {
@@ -119,26 +141,8 @@ class RestApiHandler(logging.Handler):
         self.endpoint = endpoint
         self.content_type = content_type
         self.session = FuturesSession(max_workers=32)
-        if ignored_record_keys is None:
-            self.ignored_record_keys = {
-                'levelno',
-                'pathname',
-                'module',
-                'filename',
-                'funcName',
-                'asctime',
-                'msecs',
-                'processName',
-                'relativeCreated',
-                'threadName',
-                'stack_info',
-                'exc_info',
-                'exc_text',
-                'args',
-                'msg'
-            }
-        else:
-            self.ignored_record_keys = ignored_record_keys
+        self.ignored_record_keys = (ignored_record_keys if ignored_record_keys
+                                    else DEFAULT_IGNORED_KEYS)
         foo = TOP_KEYS.union(META_KEYS)
         self.detail_ignore_set = self.ignored_record_keys.union(foo)
 
@@ -166,22 +170,26 @@ class RestApiHandler(logging.Handler):
 
         try:
             # top level payload items
+            d = record.__dict__
+            pid = d.pop('process', 'nopid')
+            tid = d.pop('thread', 'notid')
+
             payload = {
-                k: v for (k, v) in record.__dict__.items()
+                k: v for (k, v) in d.items()
                 if k in TOP_KEYS
-                }
+            }
 
             # logging meta attributes
             payload['meta'] = {
-                k: v for (k, v) in record.__dict__.items()
+                k: v for (k, v) in d.items()
                 if k in META_KEYS
-                }
+            }
 
             # everything else goes in details
             payload['details'] = {
-                k: simple_json(v) for (k, v) in record.__dict__.items()
+                k: simple_json(v) for (k, v) in d.items()
                 if k not in self.detail_ignore_set
-                }
+            }
 
             payload['log'] = payload.pop('name', 'n/a')
             payload['level'] = payload.pop('levelname', 'n/a')
@@ -198,7 +206,8 @@ class RestApiHandler(logging.Handler):
                 'message': 'could not format',
                 'exception': repr(e),
             }
-
+        payload['pid'] = 'p-{}'.format(pid)
+        payload['tid'] = 't-{}'.format(tid)
         return payload
 
     def _prepPayload(self, record):
@@ -220,7 +229,6 @@ class RestApiHandler(logging.Handler):
         """
         Override emit() method in handler parent for sending log to RESTful API
         """
-
         # avoid infinite recursion
         if record.name.startswith('requests'):
             return
