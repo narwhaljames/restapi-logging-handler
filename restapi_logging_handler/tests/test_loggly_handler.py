@@ -1,5 +1,3 @@
-import sys
-
 from mock import patch, Mock
 from unittest import TestCase
 import json
@@ -111,7 +109,7 @@ class TestAcceptsTextTags(_BaseLogglyLoggingHandler):
 class _BaseWebRequestFailure(_BaseLogglyHandler):
     results = [Mock(status_code=200)]
     post_count = 0
-    print_count = 0
+    stderr_count = 0
 
     @classmethod
     @patch('restapi_logging_handler.restapi_logging_handler.FuturesSession')
@@ -125,12 +123,12 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
         super(_BaseWebRequestFailure, cls).configure()
 
     @classmethod
-    @patch('restapi_logging_handler.loggly_handler.print')
+    @patch('restapi_logging_handler.loggly_handler.sys.stderr.write')
     def execute(cls, print):
         for index, result in enumerate(cls.results):
             cls.handler.handle_response(
                 Mock(), result, batch=[{}], attempt=index + 1)
-        cls.print_calls = [
+        cls.stderr_calls = [
             c for c in print.call_args_list
         ]
 
@@ -138,8 +136,8 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
 class TestNoFailure(_BaseWebRequestFailure):
     def test_web_posting(self):
         self.assert_post_count_is(self.post_count)
-        self.assertEqual(self.print_count,
-                         len(self.print_calls))
+        self.assertEqual(self.stderr_count,
+                         len(self.stderr_calls))
 
 
 class TestSingleFailure(TestNoFailure):
@@ -168,14 +166,15 @@ class TestMoreThanMaxFailures(TestNoFailure):
         Mock(status_code=502),
         Mock(status_code=502),
         Mock(status_code=502),
-        Mock(status_code=502),
+        Mock(status_code=504, content='hello'.encode()),
     ]
     post_count = 5
-    print_count = 1
+    stderr_count = 1
 
-    def test_print(self):
-        self.assertEqual(sys.stderr,
-                         self.print_calls[0][1]['file'])
+    def test_stderr(self):
+        self.assertEqual(
+            'LogglyHandler: max post attempts failed status 504 content hello',
+            self.stderr_calls[0][0][0])
 
 
 @patch('restapi_logging_handler.loggly_handler.requests.get')

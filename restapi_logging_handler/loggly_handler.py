@@ -64,8 +64,10 @@ class LogglyHandler(RestApiHandler):
                 self.ec2_id = requests.get(id_url, timeout=2).content.decode(
                     'utf-8')
             except Exception as e:
-                print('Could not obtain aws metadata',
-                      id_url, repr(e), file=sys.stderr)
+                sys.stderr.write(
+                    'Could not obtain metadata from url {} error {}'.format(
+                        id_url, repr(e)
+                    ))
                 self.ec2_id = 'id_NA'
 
             self.tags.append(self.ec2_id)
@@ -138,9 +140,11 @@ class LogglyHandler(RestApiHandler):
                 attempt += 1
                 self.flush(batch, attempt)
             else:
-                print('Error sending log batch, max attempts failed',
-                      resp.status_code, resp.content.decode(),
-                      file=sys.stderr)
+                sys.stderr.write(
+                    'LogglyHandler: max post attempts '
+                    'failed status {} content {}'.format(
+                        resp.status_code, resp.content.decode()
+                    ))
 
     def flush(self, current_batch=None, attempt=1):
         if current_batch is None:
