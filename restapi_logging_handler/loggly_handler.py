@@ -161,7 +161,7 @@ class LogglyHandler(RestApiHandler):
                 for tid, data in tids.items():
                     callback = partial(handle_response, obj=self, batch=data, attempt=attempt)
                     url = self._getEndpoint(add_tags=[pid, tid])
-                    payload = ','.join(data)
+                    payload = '\n'.join(data)
 
                     self.session.post(url,
                                       data=payload,

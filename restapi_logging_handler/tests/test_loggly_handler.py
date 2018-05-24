@@ -5,6 +5,7 @@ import logging
 import time
 
 from restapi_logging_handler import LogglyHandler
+from restapi_logging_handler.loggly_handler import handle_response
 
 
 class _BaseLogglyHandler(TestCase):
@@ -42,10 +43,11 @@ class _BaseLogglyHandler(TestCase):
 class _BaseLogglyLoggingHandler(_BaseLogglyHandler):
     def test_tags_are_correct(self):
         request_params = self.session.return_value.post.call_args
-        logging.warn(repr(request_params[1]['data']))
+        logging.warning(repr(request_params[1]['data']))
 
         # check each line, as bulk requests send multiple json blocks
         for line in request_params[1]['data'].split('\n'):
+            # print("line | ", line, "|")
             tags = json.loads(line)['tags']
             self.assertEqual('bulk,tag1,tag2', tags)
 
@@ -114,6 +116,7 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
         cls.session = session
         cls.configure()
         cls.execute()
+        # cls.handler.handle_response = handle_response
 
     @classmethod
     def configure(cls):
@@ -125,13 +128,15 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
             # Expect an exception if attempt > max_attempts
             if index + 1 > cls.handler.max_attempts:
                 try:
-                    cls.handler.handle_response(['{}'], index + 1, Mock(),
-                                                result)
+                    handle_response(['{}'], index + 1, Mock(), result)
+                    # cls.handler.handle_response(['{}'], index + 1, Mock(),
+                    #                             result)
                     cls.assertTrue(False, "fail")
                 except Exception:
                     pass
             else:
-                cls.handler.handle_response(['{}'], index + 1, Mock(), result)
+                # cls.handler.handle_response(['{}'], index + 1, Mock(), result)
+                handle_response(['{}'], index + 1, Mock(), result)
 
 
 class TestNoFailure(_BaseWebRequestFailure):
