@@ -55,8 +55,7 @@ logrecord attributes
      'name',
      'args',
      'funcName',
-     'thread']
-     
+     'thread'
      'process',
      'thread'
 
@@ -65,7 +64,7 @@ logrecord attributes
 
 DEFAULT_IGNORED_KEYS = {
     'process',
-    'thread'
+    'thread',
     'levelno',
     'pathname',
     'module',

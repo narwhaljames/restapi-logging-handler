@@ -1,3 +1,5 @@
+import sys
+
 from mock import patch, Mock
 from unittest import TestCase
 import json
@@ -5,7 +7,6 @@ import logging
 import time
 
 from restapi_logging_handler import LogglyHandler
-from restapi_logging_handler.loggly_handler import handle_response
 
 
 class _BaseLogglyHandler(TestCase):
@@ -109,6 +110,8 @@ class TestAcceptsTextTags(_BaseLogglyLoggingHandler):
 
 class _BaseWebRequestFailure(_BaseLogglyHandler):
     results = [Mock(status_code=200)]
+    post_count = 0
+    print_count = 0
 
     @classmethod
     @patch('restapi_logging_handler.restapi_logging_handler.FuturesSession')
@@ -116,45 +119,38 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
         cls.session = session
         cls.configure()
         cls.execute()
-        # cls.handler.handle_response = handle_response
 
     @classmethod
     def configure(cls):
         super(_BaseWebRequestFailure, cls).configure()
 
     @classmethod
-    def execute(cls):
+    @patch('restapi_logging_handler.loggly_handler.print')
+    def execute(cls, print):
         for index, result in enumerate(cls.results):
-            # Expect an exception if attempt > max_attempts
-            if index + 1 > cls.handler.max_attempts:
-                try:
-                    handle_response(['{}'], index + 1, Mock(), result)
-                    # cls.handler.handle_response(['{}'], index + 1, Mock(),
-                    #                             result)
-                    cls.assertTrue(False, "fail")
-                except Exception:
-                    pass
-            else:
-                # cls.handler.handle_response(['{}'], index + 1, Mock(), result)
-                handle_response(['{}'], index + 1, Mock(), result)
+            cls.handler.handle_response(
+                Mock(), result, batch=[{}], attempt=index + 1)
+        cls.print_calls = [
+            c for c in print.call_args_list
+        ]
 
 
 class TestNoFailure(_BaseWebRequestFailure):
-    def test_should_succeed(self):
-        self.assert_post_count_is(0)
+    def test_web_posting(self):
+        self.assert_post_count_is(self.post_count)
+        self.assertEqual(self.print_count,
+                         len(self.print_calls))
 
 
-class TestSingleFailure(_BaseWebRequestFailure):
+class TestSingleFailure(TestNoFailure):
     results = [
         Mock(status_code=502),
         Mock(status_code=200),
     ]
-
-    def test_post_twice(self):
-        self.assert_post_count_is(1)
+    post_count = 1
 
 
-class TestMaxFailures(_BaseWebRequestFailure):
+class TestMaxFailures(TestNoFailure):
     results = [
         Mock(status_code=502),
         Mock(status_code=502),
@@ -162,12 +158,10 @@ class TestMaxFailures(_BaseWebRequestFailure):
         Mock(status_code=502),
         Mock(status_code=502),
     ]
-
-    def test_post_twice(self):
-        self.assert_post_count_is(5)
+    post_count = 5
 
 
-class TestMoreThanMaxFailures(_BaseWebRequestFailure):
+class TestMoreThanMaxFailures(TestNoFailure):
     results = [
         Mock(status_code=502),
         Mock(status_code=502),
@@ -176,9 +170,12 @@ class TestMoreThanMaxFailures(_BaseWebRequestFailure):
         Mock(status_code=502),
         Mock(status_code=502),
     ]
+    post_count = 5
+    print_count = 1
 
-    def test_post_twice(self):
-        self.assert_post_count_is(5)
+    def test_print(self):
+        self.assertEqual(sys.stderr,
+                         self.print_calls[0][1]['file'])
 
 
 @patch('restapi_logging_handler.loggly_handler.requests.get')

@@ -15,16 +15,6 @@ from restapi_logging_handler.restapi_logging_handler import (
 )
 
 
-def handle_response(sess, resp, obj=None, batch=None, attempt=0, ):
-    if resp.status_code != 200:
-        if attempt <= obj.max_attempts:
-            attempt += 1
-            obj.flush(batch, attempt)
-        else:
-            print('Error sending log batch, max attempts failed',
-                  resp.status_code, resp.content.decode(), file=sys.stderr)
-
-
 def setInterval(interval):
     def decorator(function):
         def wrapper(*args, **kwargs):
@@ -50,7 +40,11 @@ class LogglyHandler(RestApiHandler):
     Some ideas borrowed from github.com/kennedyj/loggly-handler
     """
 
-    def __init__(self, custom_token=None, app_tags=None, max_attempts=5, aws_tag=False):
+    def __init__(self,
+                 custom_token=None,
+                 app_tags=None,
+                 max_attempts=5,
+                 aws_tag=False):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
@@ -70,7 +64,8 @@ class LogglyHandler(RestApiHandler):
                 self.ec2_id = requests.get(id_url, timeout=2).content.decode(
                     'utf-8')
             except Exception as e:
-                print('Could not obtain aws metadata', id_url, repr(e), file=sys.stderr)
+                print('Could not obtain aws metadata',
+                      id_url, repr(e), file=sys.stderr)
                 self.ec2_id = 'id_NA'
 
             self.tags.append(self.ec2_id)
@@ -137,6 +132,16 @@ class LogglyHandler(RestApiHandler):
 
         return payload
 
+    def handle_response(self, sess, resp, batch=None, attempt=0, ):
+        if resp.status_code != 200:
+            if attempt <= self.max_attempts:
+                attempt += 1
+                self.flush(batch, attempt)
+            else:
+                print('Error sending log batch, max attempts failed',
+                      resp.status_code, resp.content.decode(),
+                      file=sys.stderr)
+
     def flush(self, current_batch=None, attempt=1):
         if current_batch is None:
             self.logs, current_batch = [], self.logs
@@ -159,14 +164,17 @@ class LogglyHandler(RestApiHandler):
 
             for pid, tids in pids.items():
                 for tid, data in tids.items():
-                    callback = partial(handle_response, obj=self, batch=data, attempt=attempt)
+                    callback = partial(
+                        self.handle_response, batch=data, attempt=attempt)
                     url = self._getEndpoint(add_tags=[pid, tid])
                     payload = '\n'.join(data)
 
-                    self.session.post(url,
-                                      data=payload,
-                                      headers={'content-type': 'application/json'},
-                                      background_callback=callback)
+                    self.session.post(
+                        url,
+                        data=payload,
+                        headers={'content-type': 'application/json'},
+                        background_callback=callback
+                    )
 
     def emit(self, record):
         """

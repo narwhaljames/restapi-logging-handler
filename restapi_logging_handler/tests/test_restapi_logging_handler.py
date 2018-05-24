@@ -20,6 +20,9 @@ class TestRestApiHandler(TestCase):
         cls.session = session
         cls.handler = RestApiHandler('endpoint/url')
 
+    def setUp(self):
+        self.session.reset_mock()
+
     def test_get_endpoint(self):
         assert self.handler._getEndpoint() == 'endpoint/url'
 
@@ -48,16 +51,16 @@ class TestRestApiHandler(TestCase):
         payload = json.loads(request_params[1]['data'])
 
         created = payload['meta'].pop('created')
-        process = payload['meta'].pop('process')
-        thread = payload['meta'].pop('thread')
+        process = payload.pop('pid')
+        thread = payload.pop('tid')
         line = payload['meta'].pop('line')
 
         self.assertTrue(isinstance(created, float))
-        self.assertTrue(isinstance(process, int))
-        self.assertTrue(isinstance(thread, int))
         self.assertTrue(isinstance(line, int))
+        self.assertEqual('p-', process[:2])
+        self.assertEqual('t-', thread[:2])
 
-        self.assertEquals(
+        self.assertEqual(
             payload,
             {
                 'details': {},
@@ -87,9 +90,9 @@ class TestRestApiHandler(TestCase):
 
         details = payload.pop('details')
 
-        self.assertEquals(
+        self.assertEqual(
             details,
-            {'this': '1', 'that': 'null'}
+            {'this': '1', 'that': 'null', }
         )
 
     def test_logging_uuid(self):
@@ -107,7 +110,7 @@ class TestRestApiHandler(TestCase):
 
         details = payload.pop('details')
 
-        self.assertEquals(
+        self.assertEqual(
             details,
             {'this': '"{}"'.format(str(random_id))}
         )
@@ -127,9 +130,10 @@ class TestRestApiHandler(TestCase):
 
         details = payload.pop('details')
 
-        self.assertEquals(
+        self.assertEqual(
             details,
-            {'this': '"{}"'.format(random_date.isoformat(sep='T'))}
+            {
+                'this': '"{}"'.format(random_date.isoformat(sep='T'))}
         )
 
     def test_logging_thing(self):
@@ -153,17 +157,17 @@ class TestRestApiHandler(TestCase):
         details = payload.pop('details')
 
         thing = details.pop('this')
-        self.assertEquals(json.loads(thing),
-                          {"thing1": "Fred", "thing2": "Jerry"})
+        self.assertEqual(json.loads(thing),
+                         {"thing1": "Fred", "thing2": "Jerry"})
 
-        self.assertEquals(
+        self.assertEqual(
             details,
             {'that': 'null'}
         )
 
     def test_ignored_record_keys(self):
 
-        self.assertEquals(
+        self.assertEqual(
             self.handler.ignored_record_keys,
             {
                 'levelno',
@@ -180,13 +184,16 @@ class TestRestApiHandler(TestCase):
                 'exc_info',
                 'exc_text',
                 'args',
-                'msg'
+                'msg',
+                'thread',
+                'process'
+
             }
         )
 
     def test_detail_keys(self):
 
-        self.assertEquals(
+        self.assertEqual(
             self.handler.detail_ignore_set,
             {
                 'levelno',
