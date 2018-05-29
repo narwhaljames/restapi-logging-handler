@@ -8,3 +8,8 @@
 /*.egg-info
 /*.egg
 .tox
+
+.idea
+
+.eggs
+

@@ -1,12 +1,18 @@
 from __future__ import absolute_import
+
 import atexit
-from functools import partial
 import json
-import logging
 import os
 import threading
+from functools import partial
+import sys
 
-from restapi_logging_handler.restapi_logging_handler import RestApiHandler
+import requests
+
+from restapi_logging_handler.restapi_logging_handler import (
+    RestApiHandler,
+    serialize,
+)
 
 
 def setInterval(interval):
@@ -14,15 +20,17 @@ def setInterval(interval):
         def wrapper(*args, **kwargs):
             stopped = threading.Event()
 
-            def loop(): # executed in another thread
-                while not stopped.wait(interval): # until stopped
+            def loop():  # executed in another thread
+                while not stopped.wait(interval):  # until stopped
                     function(*args, **kwargs)
 
             t = threading.Thread(target=loop)
-            t.daemon = True # stop if the program exits
+            t.daemon = True  # stop if the program exits
             t.start()
             return stopped
+
         return wrapper
+
     return decorator
 
 
@@ -31,15 +39,41 @@ class LogglyHandler(RestApiHandler):
     A handler which pipes all logs to loggly through HTTP POST requests.
     Some ideas borrowed from github.com/kennedyj/loggly-handler
     """
-    def __init__(self, custom_token, app_tags, max_attempts=5):
+
+    def __init__(self,
+                 custom_token=None,
+                 app_tags=None,
+                 max_attempts=5,
+                 aws_tag=False):
         """
         customToken: The loggly custom token account ID
         appTags: Loggly tags. Can be a tag string or a list of tag strings
+        aws_tag: include aws instance id in tags if True and id can be found
         """
         self.pid = os.getpid()
         self.tags = self._getTags(app_tags)
         self.custom_token = custom_token
+
+        self.aws_tag = aws_tag
+        if self.aws_tag:
+            id_url = None
+
+            try:
+                aws_base = "http://169.254.169.254/latest/meta-data/{}"
+                id_url = aws_base.format('instance-id')
+                self.ec2_id = requests.get(id_url, timeout=2).content.decode(
+                    'utf-8')
+            except Exception as e:
+                sys.stderr.write(
+                    'Could not obtain metadata from url {} error {}'.format(
+                        id_url, repr(e)
+                    ))
+                self.ec2_id = 'id_NA'
+
+            self.tags.append(self.ec2_id)
+
         super(LogglyHandler, self).__init__(self._getEndpoint())
+
         self.max_attempts = max_attempts
         self.timer = None
         self.logs = []
@@ -63,16 +97,23 @@ class LogglyHandler(RestApiHandler):
             tags.insert(0, 'bulk')
         return tags
 
-    def _implodeTags(self):
-        return ",".join(self.tags)
+    def _implodeTags(self, add_tags=None):
+        if add_tags:
+            tags = self.tags.copy()
+            tags.extend(add_tags)
+        else:
+            tags = self.tags
 
-    def _getEndpoint(self):
+        return ",".join(tags)
+
+    def _getEndpoint(self, add_tags=None):
         """
         Override Build Loggly's RESTful API endpoint
         """
+
         return 'https://logs-01.loggly.com/bulk/{0}/tag/{1}/'.format(
             self.custom_token,
-            self._implodeTags()
+            self._implodeTags(add_tags=add_tags)
         )
 
     def _prepPayload(self, record):
@@ -81,7 +122,8 @@ class LogglyHandler(RestApiHandler):
         This preps the payload to be formatted in whatever content-type is
         expected from the RESTful API.
         """
-        return json.dumps(self._getPayload(record))
+        # return json.dumps(self._getPayload(record), default=serialize)
+        return self._getPayload(record)
 
     def _getPayload(self, record):
         """
@@ -89,35 +131,59 @@ class LogglyHandler(RestApiHandler):
         """
         payload = super(LogglyHandler, self)._getPayload(record)
         payload['tags'] = self._implodeTags()
+
         return payload
 
-    def handle_response(self, batch, attempt, sess, resp):
+    def handle_response(self, sess, resp, batch=None, attempt=0, ):
         if resp.status_code != 200:
             if attempt <= self.max_attempts:
                 attempt += 1
                 self.flush(batch, attempt)
             else:
-                raise Exception('Error sending log batch')
-                self.handleError(logging.makeLogRecord({
-                    'msg': 'Error sending log batch: %s',
-                    'args': batch,
-                }))
+                sys.stderr.write(
+                    'LogglyHandler: max post attempts '
+                    'failed status {} content {}'.format(
+                        resp.status_code, resp.content.decode()
+                    ))
 
     def flush(self, current_batch=None, attempt=1):
         if current_batch is None:
             self.logs, current_batch = [], self.logs
-        callback = partial(
-            self.handle_response, current_batch, attempt=attempt)
         if current_batch:
-            data = '\n'.join(current_batch)
-            self.session.post(self._getEndpoint(),
-                              data=data,
-                              headers={'content-type': 'application/json'},
-                              background_callback=callback)
+            # group by process id and thread id, for tags
+            pids = {}
+            for d in current_batch:
+                pid = d.pop('pid', 'nopid')
+                tid = d.pop('tid', 'notid')
+                data = json.dumps(d, default=serialize)
+
+                if pid in pids:
+                    p = pids[pid]
+                    if tid in p:
+                        p[tid].append(data)
+                    else:
+                        p[tid] = [data]
+                else:
+                    pids[pid] = {tid: [data]}
+
+            for pid, tids in pids.items():
+                for tid, data in tids.items():
+                    callback = partial(
+                        self.handle_response, batch=data, attempt=attempt)
+                    url = self._getEndpoint(add_tags=[pid, tid])
+                    payload = '\n'.join(data)
+
+                    self.session.post(
+                        url,
+                        data=payload,
+                        headers={'content-type': 'application/json'},
+                        background_callback=callback
+                    )
 
     def emit(self, record):
         """
-        Override emit() method in handler parent for sending log to RESTful API
+        Override emit() method in handler parent for sending log to RESTful
+        API
         """
 
         pid = os.getpid()

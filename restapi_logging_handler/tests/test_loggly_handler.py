@@ -19,7 +19,7 @@ class _BaseLogglyHandler(TestCase):
 
     @classmethod
     def configure(cls):
-        cls.handler = LogglyHandler('LOGGLYKEY', cls.tags, 0.01)
+        cls.handler = LogglyHandler('LOGGLYKEY', cls.tags, max_attempts=5)
         logging.root.addHandler(cls.handler)
 
     @classmethod
@@ -36,17 +36,17 @@ class _BaseLogglyHandler(TestCase):
         cls.handler.flush()
 
     def assert_post_count_is(self, count):
-       self.assertEqual(self.session.return_value.post.call_count, count)
+        self.assertEqual(self.session.return_value.post.call_count, count)
 
 
 class _BaseLogglyLoggingHandler(_BaseLogglyHandler):
-
     def test_tags_are_correct(self):
         request_params = self.session.return_value.post.call_args
-        logging.warn(repr(request_params[1]['data']))
+        logging.warning(repr(request_params[1]['data']))
 
         # check each line, as bulk requests send multiple json blocks
         for line in request_params[1]['data'].split('\n'):
+            # print("line | ", line, "|")
             tags = json.loads(line)['tags']
             self.assertEqual('bulk,tag1,tag2', tags)
 
@@ -108,6 +108,8 @@ class TestAcceptsTextTags(_BaseLogglyLoggingHandler):
 
 class _BaseWebRequestFailure(_BaseLogglyHandler):
     results = [Mock(status_code=200)]
+    post_count = 0
+    stderr_count = 0
 
     @classmethod
     @patch('restapi_logging_handler.restapi_logging_handler.FuturesSession')
@@ -121,37 +123,32 @@ class _BaseWebRequestFailure(_BaseLogglyHandler):
         super(_BaseWebRequestFailure, cls).configure()
 
     @classmethod
-    def execute(cls):
+    @patch('restapi_logging_handler.loggly_handler.sys.stderr.write')
+    def execute(cls, print):
         for index, result in enumerate(cls.results):
-            # Expect an exception if attempt > max_attempts
-            if index + 1 > cls.handler.max_attempts:
-                try:
-                    cls.handler.handle_response(['{}'], index + 1, Mock(),
-                                                result)
-                except Exception:
-                    pass
-                else:
-                    cls.assertTrue(False)
-            else:
-                cls.handler.handle_response(['{}'], index + 1, Mock(), result)
+            cls.handler.handle_response(
+                Mock(), result, batch=[{}], attempt=index + 1)
+        cls.stderr_calls = [
+            c for c in print.call_args_list
+        ]
 
 
 class TestNoFailure(_BaseWebRequestFailure):
-    def test_should_succeed(self):
-        self.assert_post_count_is(0)
+    def test_web_posting(self):
+        self.assert_post_count_is(self.post_count)
+        self.assertEqual(self.stderr_count,
+                         len(self.stderr_calls))
 
 
-class TestSingleFailure(_BaseWebRequestFailure):
+class TestSingleFailure(TestNoFailure):
     results = [
         Mock(status_code=502),
         Mock(status_code=200),
     ]
-
-    def test_post_twice(self):
-        self.assert_post_count_is(1)
+    post_count = 1
 
 
-class TestMaxFailures(_BaseWebRequestFailure):
+class TestMaxFailures(TestNoFailure):
     results = [
         Mock(status_code=502),
         Mock(status_code=502),
@@ -159,20 +156,40 @@ class TestMaxFailures(_BaseWebRequestFailure):
         Mock(status_code=502),
         Mock(status_code=502),
     ]
-
-    def test_post_twice(self):
-        self.assert_post_count_is(5)
+    post_count = 5
 
 
-class TestMoreThanMaxFailures(_BaseWebRequestFailure):
+class TestMoreThanMaxFailures(TestNoFailure):
     results = [
         Mock(status_code=502),
         Mock(status_code=502),
         Mock(status_code=502),
         Mock(status_code=502),
         Mock(status_code=502),
-        Mock(status_code=502),
+        Mock(status_code=504, content='hello'.encode()),
     ]
+    post_count = 5
+    stderr_count = 1
 
-    def test_post_twice(self):
-        self.assert_post_count_is(5)
+    def test_stderr(self):
+        self.assertEqual(
+            'LogglyHandler: max post attempts failed status 504 content hello',
+            self.stderr_calls[0][0][0])
+
+
+@patch('restapi_logging_handler.loggly_handler.requests.get')
+class TestAwsTagging(TestCase):
+    def test_tag_true(self, mock_get):
+        mock_get.return_value.content = 'id_test'.encode('utf-8')
+
+        loggly = LogglyHandler('token', ['tag'], max_attempts=1, aws_tag=True)
+
+        self.assertEqual(loggly.tags, ['bulk', 'tag', 'id_test'])
+
+    def test_tag_false(self, mock_get):
+        mock_get.return_value.content = 'id_test'.encode('utf-8')
+
+        loggly = LogglyHandler('token', ['tag'], max_attempts=1,
+                               aws_tag=False)
+
+        self.assertEqual(loggly.tags, ['bulk', 'tag'])
