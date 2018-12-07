@@ -9,7 +9,7 @@ except (IOError, ImportError):
 
 setup(
     name='restapi-logging-handler',
-    version='0.3',
+    version='0.4',
     description='A handler for the python logging module that sends logs \
         through any REST-ful API. With threading and Loggly support that \
         handles batch POSTS.',
@@ -17,13 +17,10 @@ setup(
     packages=['restapi_logging_handler'],
     install_requires=['requests-futures'],
     author='RJ Gilligan, Ethan McCreadie, Mikey Reppy',
-    author_email='rj@somebells.com, '
-                 'ethan.mccreadie@nrg.com, '
-                 'mgpr@abacalab.com',
+    author_email='rj@somebells.com, ' 'ethan.mccreadie@nrg.com, ' 'mgpr@abacalab.com',
     url='https://github.com/narwhaljames/restapi-logging-handler.git',
     download_url=(
-        'https://github.com/narwhaljames/'
-        'restapi-logging-handler/tarball/0.3'
+        'https://github.com/narwhaljames/' 'restapi-logging-handler/tarball/0.4'
     ),
     keywords=['rest', 'api', 'logging', 'handler', 'loggly'],
     classifiers=[],
