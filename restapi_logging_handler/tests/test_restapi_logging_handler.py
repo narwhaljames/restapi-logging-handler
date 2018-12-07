@@ -186,7 +186,8 @@ class TestRestApiHandler(TestCase):
                 'args',
                 'msg',
                 'thread',
-                'process'
+                'process',
+                'message',
 
             }
         )
@@ -217,5 +218,6 @@ class TestRestApiHandler(TestCase):
                 'thread',
                 'name',
                 'lineno',
+                'message',
             }
         )

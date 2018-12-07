@@ -79,7 +79,8 @@ DEFAULT_IGNORED_KEYS = {
     'exc_info',
     'exc_text',
     'args',
-    'msg'
+    'msg',
+    'message',
 }
 META_KEYS = {
     'created',
